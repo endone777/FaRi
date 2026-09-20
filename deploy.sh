@@ -1,14 +1,15 @@
-#!/usr/bin/env bash
+#!/bin/sh
 #
 # Поднимает FARI на сервере одной командой.
 #
 #   git clone <repo> && cd fari-lara && ./deploy.sh
 #
-# Если на сервере нет Docker, скрипт предложит установить его официальным
-# установщиком get.docker.com. Повторный запуск после `git pull` пересобирает
-# образ и накатывает миграции, не теряя данных.
+# Скрипт на POSIX sh: работает и через ./deploy.sh, и через `sh deploy.sh`,
+# и в bash, и в busybox. Если на сервере нет Docker, предложит установить его
+# официальным установщиком get.docker.com. Повторный запуск после `git pull`
+# пересобирает образ и накатывает миграции, не теряя данных.
 
-set -euo pipefail
+set -eu
 
 cd "$(dirname "$0")"
 
@@ -22,11 +23,17 @@ SEED="false"
 ACTION="up"
 NO_CACHE=""
 INSTALL_DOCKER="ask"
+DOCKER_PREFIX=""
+COMPOSE_CMD=""
 
 # ── вывод ────────────────────────────────────────────────
 
 if [ -t 1 ]; then
-    BOLD=$'\033[1m'; GREEN=$'\033[32m'; YELLOW=$'\033[33m'; RED=$'\033[31m'; OFF=$'\033[0m'
+    BOLD=$(printf '\033[1m')
+    GREEN=$(printf '\033[32m')
+    YELLOW=$(printf '\033[33m')
+    RED=$(printf '\033[31m')
+    OFF=$(printf '\033[0m')
 else
     BOLD=""; GREEN=""; YELLOW=""; RED=""; OFF=""
 fi
@@ -95,17 +102,15 @@ have() { command -v "$1" >/dev/null 2>&1; }
 
 SUDO=""
 
-if [ "$(id -u)" -ne 0 ]; then
-    if have sudo; then
-        SUDO="sudo"
-    fi
+if [ "$(id -u)" -ne 0 ] && have sudo; then
+    SUDO="sudo"
 fi
 
 as_root() {
     if [ "$(id -u)" -eq 0 ]; then
         "$@"
     elif [ -n "$SUDO" ]; then
-        $SUDO "$@"
+        "$SUDO" "$@"
     else
         die "Нужны права root: запустите скрипт через sudo."
     fi
@@ -134,10 +139,12 @@ pkg_install() {
     fi
 }
 
-have curl || have wget || pkg_install curl
+if ! have curl && ! have wget; then
+    pkg_install curl
+fi
 
 fetch() {
-    # fetch <url> <файл>
+    # fetch <адрес> <файл>
     if have curl; then
         curl -fsSL "$1" -o "$2"
     else
@@ -155,9 +162,28 @@ http_ok() {
 
 # ── Docker ───────────────────────────────────────────────
 
+docker_cli() {
+    if [ -n "$DOCKER_PREFIX" ]; then
+        "$DOCKER_PREFIX" docker "$@"
+    else
+        docker "$@"
+    fi
+}
+
+compose() {
+    if [ "$COMPOSE_CMD" = "plugin" ]; then
+        docker_cli compose -f "$COMPOSE_FILE" "$@"
+    elif [ -n "$DOCKER_PREFIX" ]; then
+        "$DOCKER_PREFIX" docker-compose -f "$COMPOSE_FILE" "$@"
+    else
+        docker-compose -f "$COMPOSE_FILE" "$@"
+    fi
+}
+
 install_docker() {
-    [ "$INSTALL_DOCKER" != "no" ] \
-        || die "Docker не установлен. Поставьте его: https://docs.docker.com/engine/install/"
+    if [ "$INSTALL_DOCKER" = "no" ]; then
+        die "Docker не установлен. Поставьте его: https://docs.docker.com/engine/install/"
+    fi
 
     if [ "$INSTALL_DOCKER" = "ask" ]; then
         printf '\n'
@@ -167,7 +193,8 @@ install_docker() {
 
         if [ -t 0 ]; then
             printf '    Установить Docker сейчас? [Y/n] '
-            read -r answer
+            read -r answer || answer=""
+
             case "$answer" in
                 [Nn]*) die "Хорошо. Установите Docker вручную и запустите скрипт снова." ;;
             esac
@@ -182,8 +209,8 @@ install_docker() {
 
     step "Ставлю Docker Engine и плагин Compose"
 
-    installer="$(mktemp)"
-    trap 'rm -f "$installer"' EXIT
+    installer=$(mktemp)
+    trap 'rm -f "$installer"' EXIT INT TERM
 
     fetch "$DOCKER_INSTALLER_URL" "$installer" \
         || die "Не удалось скачать установщик Docker. Проверьте доступ в интернет."
@@ -191,7 +218,7 @@ install_docker() {
     as_root sh "$installer" || die "Установщик Docker завершился с ошибкой."
 
     rm -f "$installer"
-    trap - EXIT
+    trap - EXIT INT TERM
 
     have docker || die "Docker не появился после установки. Поставьте его вручную."
 
@@ -199,11 +226,14 @@ install_docker() {
 
     if have systemctl; then
         as_root systemctl enable --now docker >/dev/null 2>&1 || true
+    elif have rc-update; then
+        as_root rc-update add docker default >/dev/null 2>&1 || true
+        as_root rc-service docker start >/dev/null 2>&1 || true
     elif have service; then
         as_root service docker start >/dev/null 2>&1 || true
     fi
 
-    if [ "$(id -u)" -ne 0 ] && [ -n "${USER:-}" ]; then
+    if [ "$(id -u)" -ne 0 ] && [ -n "${USER:-}" ] && have usermod; then
         as_root usermod -aG docker "$USER" >/dev/null 2>&1 || true
         warn "Пользователь $USER добавлен в группу docker."
         warn "Чтобы работать с docker без sudo, перезайдите в систему."
@@ -215,15 +245,24 @@ start_docker_daemon() {
 
     if have systemctl; then
         as_root systemctl enable --now docker >/dev/null 2>&1 || true
+    elif have rc-service; then
+        as_root rc-service docker start >/dev/null 2>&1 || true
     elif have service; then
         as_root service docker start >/dev/null 2>&1 || true
     fi
 
-    for _ in 1 2 3 4 5 6 7 8 9 10; do
-        if docker info >/dev/null 2>&1 || { [ -n "$SUDO" ] && $SUDO docker info >/dev/null 2>&1; }; then
+    waited=0
+
+    while [ "$waited" -lt 15 ]; do
+        if docker info >/dev/null 2>&1; then
             return 0
         fi
 
+        if [ -n "$SUDO" ] && "$SUDO" docker info >/dev/null 2>&1; then
+            return 0
+        fi
+
+        waited=$((waited + 1))
         sleep 1
     done
 
@@ -232,31 +271,31 @@ start_docker_daemon() {
 
 have docker || install_docker
 
-DOCKER_PREFIX=()
-
 if ! docker info >/dev/null 2>&1; then
-    if [ -n "$SUDO" ] && $SUDO docker info >/dev/null 2>&1; then
-        DOCKER_PREFIX=("$SUDO")
+    if [ -n "$SUDO" ] && "$SUDO" docker info >/dev/null 2>&1; then
+        DOCKER_PREFIX="$SUDO"
     else
         start_docker_daemon \
             || die "Демон Docker не отвечает. Запустите его: sudo systemctl start docker"
 
         if ! docker info >/dev/null 2>&1; then
-            DOCKER_PREFIX=("$SUDO")
+            DOCKER_PREFIX="$SUDO"
         fi
     fi
 fi
 
-if "${DOCKER_PREFIX[@]}" docker compose version >/dev/null 2>&1; then
-    COMPOSE=("${DOCKER_PREFIX[@]}" docker compose -f "$COMPOSE_FILE")
+if docker_cli compose version >/dev/null 2>&1; then
+    COMPOSE_CMD="plugin"
 elif have docker-compose; then
-    COMPOSE=("${DOCKER_PREFIX[@]}" docker-compose -f "$COMPOSE_FILE")
+    COMPOSE_CMD="standalone"
 else
     warn "Нет плагина Docker Compose — ставлю его."
     pkg_install docker-compose-plugin
-    "${DOCKER_PREFIX[@]}" docker compose version >/dev/null 2>&1 \
+
+    docker_cli compose version >/dev/null 2>&1 \
         || die "Docker Compose так и не заработал: https://docs.docker.com/compose/install/"
-    COMPOSE=("${DOCKER_PREFIX[@]}" docker compose -f "$COMPOSE_FILE")
+
+    COMPOSE_CMD="plugin"
 fi
 
 [ -f "$COMPOSE_FILE" ] || die "Рядом со скриптом нет $COMPOSE_FILE — запускайте из корня проекта."
@@ -266,30 +305,31 @@ fi
 case "$ACTION" in
     down)
         step "Останавливаю приложение"
-        "${COMPOSE[@]}" down
+        compose down
         ok "Остановлено. Данные сохранены в томе fari-storage."
         exit 0
         ;;
-    logs) exec "${COMPOSE[@]}" logs -f --tail=200 app ;;
-    status) exec "${COMPOSE[@]}" ps ;;
-    shell) exec "${COMPOSE[@]}" exec app sh ;;
+    logs) compose logs -f --tail=200 app; exit 0 ;;
+    status) compose ps; exit 0 ;;
+    shell) compose exec app sh; exit 0 ;;
 esac
 
 # ── .env ─────────────────────────────────────────────────
 
 set_env() {
-    local key="$1" value="$2" escaped
+    key="$1"
+    value="$2"
     escaped=$(printf '%s' "$value" | sed -e 's/[\/&|]/\\&/g')
 
-    if grep -qE "^#?${key}=" .env; then
-        sed -i -E "s|^#?${key}=.*|${key}=${escaped}|" .env
+    if grep -q "^#\{0,1\}${key}=" .env; then
+        sed -i "s|^#\{0,1\}${key}=.*|${key}=${escaped}|" .env
     else
         printf '%s=%s\n' "$key" "$value" >> .env
     fi
 }
 
 read_env() {
-    sed -nE "s/^$1=//p" .env | tail -n 1
+    sed -n "s/^$1=//p" .env | tail -n 1
 }
 
 FIRST_RUN="false"
@@ -302,7 +342,7 @@ if [ ! -f .env ]; then
     ok ".env создан"
 fi
 
-APP_KEY_VALUE="$(read_env APP_KEY)"
+APP_KEY_VALUE=$(read_env APP_KEY)
 
 if [ -z "$APP_KEY_VALUE" ] || [ "$APP_KEY_VALUE" = "base64:" ]; then
     step "Генерирую ключ приложения"
@@ -320,8 +360,17 @@ fi
 if [ -n "$APP_URL_OVERRIDE" ]; then
     APP_URL_VALUE="$APP_URL_OVERRIDE"
 elif [ "$APP_PORT" = "80" ]; then
-    HOST_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
-    APP_URL_VALUE="http://${HOST_IP:-localhost}"
+    HOST_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || true)
+
+    if [ -z "$HOST_IP" ]; then
+        HOST_IP=$(hostname -i 2>/dev/null | awk '{print $1}' || true)
+    fi
+
+    case "$HOST_IP" in
+        ''|127.*) HOST_IP="localhost" ;;
+    esac
+
+    APP_URL_VALUE="http://${HOST_IP}"
 else
     APP_URL_VALUE="http://localhost:${APP_PORT}"
 fi
@@ -343,7 +392,7 @@ fi
 # ── занятость порта ──────────────────────────────────────
 
 if have ss && ss -ltn "sport = :$APP_PORT" 2>/dev/null | grep -q LISTEN; then
-    if ! "${COMPOSE[@]}" ps --services --filter status=running 2>/dev/null | grep -q '^app$'; then
+    if ! compose ps --services --filter status=running 2>/dev/null | grep -q '^app$'; then
         warn "Порт $APP_PORT уже занят другим процессом — запуск может не удаться."
         warn "Освободите его или укажите другой: ./deploy.sh --port 8080"
     fi
@@ -352,25 +401,32 @@ fi
 # ── сборка и запуск ──────────────────────────────────────
 
 step "Собираю образ (первый раз это занимает несколько минут)"
-"${COMPOSE[@]}" build $NO_CACHE
+
+if [ -n "$NO_CACHE" ]; then
+    compose build "$NO_CACHE"
+else
+    compose build
+fi
 
 step "Запускаю приложение"
-DEPLOY_SEED="$SEED" "${COMPOSE[@]}" up -d --remove-orphans
+DEPLOY_SEED="$SEED" compose up -d --remove-orphans
 
 step "Жду, пока приложение ответит"
 
 READY="false"
+waited=0
 
-for _ in $(seq 1 60); do
+while [ "$waited" -lt 60 ]; do
     if http_ok "http://127.0.0.1:${APP_PORT}/up"; then
         READY="true"
         break
     fi
 
-    if ! "${COMPOSE[@]}" ps --services --filter status=running 2>/dev/null | grep -q '^app$'; then
+    if ! compose ps --services --filter status=running 2>/dev/null | grep -q '^app$'; then
         break
     fi
 
+    waited=$((waited + 1))
     sleep 2
 done
 
@@ -378,7 +434,7 @@ if [ "$READY" != "true" ]; then
     printf '\n'
     warn "Приложение не ответило за две минуты. Последние строки лога:"
     printf '\n'
-    "${COMPOSE[@]}" logs --tail=40 app
+    compose logs --tail=40 app
     die "Запуск не завершился. Смотрите лог: ./deploy.sh logs"
 fi
 
