@@ -1,7 +1,7 @@
 import { router, usePage } from '@inertiajs/vue3';
 import { computed, type ComputedRef } from 'vue';
 import cartRoutes from '@/routes/cart';
-import type { CartState, Product } from '@/types/fari';
+import type { CartLine, CartState, Product } from '@/types/fari';
 
 const EMPTY: CartState = {
     lines: [],
@@ -12,7 +12,9 @@ const EMPTY: CartState = {
 
 export type UseCartReturn = {
     cart: ComputedRef<CartState>;
-    add: (product: Product, side?: string, qty?: number) => void;
+    lineFor: (product: Product) => CartLine | undefined;
+    qtyOf: (product: Product) => number;
+    add: (product: Product, qty?: number) => void;
     setQty: (key: string, qty: number) => void;
     remove: (key: string) => void;
     clear: () => void;
@@ -26,10 +28,18 @@ export function useCart(): UseCartReturn {
         () => (page.props.cart as CartState | undefined) ?? EMPTY,
     );
 
-    function add(product: Product, side = 'left', qty = 1): void {
+    function lineFor(product: Product): CartLine | undefined {
+        return cart.value.lines.find((line) => line.product.id === product.id);
+    }
+
+    function qtyOf(product: Product): number {
+        return lineFor(product)?.qty ?? 0;
+    }
+
+    function add(product: Product, qty = 1): void {
         router.post(
             cartRoutes.store.url(),
-            { product_id: product.id, side, qty },
+            { product_id: product.id, qty },
             { preserveScroll: true, preserveState: true },
         );
     }
@@ -56,5 +66,5 @@ export function useCart(): UseCartReturn {
         });
     }
 
-    return { cart, add, setQty, remove, clear };
+    return { cart, lineFor, qtyOf, add, setQty, remove, clear };
 }

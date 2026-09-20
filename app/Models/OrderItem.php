@@ -14,12 +14,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $product_id
  * @property string $title
  * @property string|null $oem
- * @property string $side
  * @property int $unit_price
  * @property int $qty
  * @property int $line_total
  */
-#[Fillable(['product_id', 'title', 'oem', 'side', 'unit_price', 'qty', 'line_total'])]
+#[Fillable(['product_id', 'title', 'oem', 'unit_price', 'qty', 'line_total'])]
 class OrderItem extends Model
 {
     /** @use HasFactory<OrderItemFactory> */

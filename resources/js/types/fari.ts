@@ -1,6 +1,21 @@
+export type CarModelOption = {
+    id: number;
+    name: string;
+    years: string;
+    year_from: number;
+    year_to: number;
+};
+
+export type CarBrandOption = {
+    id: number;
+    name: string;
+    models: CarModelOption[];
+};
+
 export type Product = {
     id: number;
     slug: string;
+    car_model_id: number | null;
     brand: string;
     model: string;
     year_from: number;
@@ -37,7 +52,6 @@ export type DeliveryMethod = {
 
 export type CartLine = {
     key: string;
-    side: string;
     qty: number;
     line_total: number;
     product: Product;
@@ -54,8 +68,6 @@ export type OrderItem = {
     id: number;
     title: string;
     oem: string | null;
-    side: string;
-    side_label: string;
     unit_price: number;
     qty: number;
     line_total: number;

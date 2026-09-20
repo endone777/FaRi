@@ -3,7 +3,6 @@
 namespace App\Http\Resources;
 
 use App\Models\Order;
-use App\Support\Cart;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -38,8 +37,6 @@ class OrderResource extends JsonResource
                 'id' => $item->id,
                 'title' => $item->title,
                 'oem' => $item->oem,
-                'side' => $item->side,
-                'side_label' => Cart::SIDES[$item->side] ?? $item->side,
                 'unit_price' => $item->unit_price,
                 'qty' => $item->qty,
                 'line_total' => $item->line_total,

@@ -15,8 +15,7 @@ class ProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'brand' => ['required', 'string', 'max:60'],
-            'model' => ['required', 'string', 'max:80'],
+            'car_model_id' => ['required', 'integer', Rule::exists('car_models', 'id')],
             'name' => ['required', 'string', 'max:120'],
             'year_from' => ['required', 'integer', 'min:1950', 'max:2100'],
             'year_to' => ['required', 'integer', 'min:1950', 'max:2100', 'gte:year_from'],
@@ -44,8 +43,7 @@ class ProductRequest extends FormRequest
     public function attributes(): array
     {
         return [
-            'brand' => 'марка',
-            'model' => 'модель',
+            'car_model_id' => 'автомобиль',
             'name' => 'название',
             'year_from' => 'год с',
             'year_to' => 'год по',

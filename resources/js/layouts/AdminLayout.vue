@@ -18,6 +18,11 @@ const tabs = computed(() => [
         match: '/admin/products',
     },
     {
+        label: 'Автомобили',
+        href: adminRoutes.cars.index(),
+        match: '/admin/cars',
+    },
+    {
         label: 'Заявки',
         href: adminRoutes.orders.index(),
         match: '/admin/orders',

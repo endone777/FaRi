@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\ProductRequest;
 use App\Http\Resources\ProductResource;
+use App\Models\CarBrand;
+use App\Models\CarModel;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -30,16 +32,17 @@ class ProductController extends Controller
         $products = Product::query()
             ->when($filters['q'], fn (Builder $query, string $term) => $query->where(
                 fn (Builder $inner) => $inner
-                    ->where('brand', 'like', "%{$term}%")
-                    ->orWhere('model', 'like', "%{$term}%")
-                    ->orWhere('name', 'like', "%{$term}%")
-                    ->orWhere('oem', 'like', "%{$term}%"),
+                    ->where('name', 'like', "%{$term}%")
+                    ->orWhere('oem', 'like', "%{$term}%")
+                    ->orWhereRelation('carModel', 'name', 'like', "%{$term}%")
+                    ->orWhereHas('carModel.carBrand', fn (Builder $brand) => $brand
+                        ->where('name', 'like', "%{$term}%")),
             ))
-            ->when($filters['brand'], fn (Builder $query, string $brand) => $query->where('brand', $brand))
+            ->when($filters['brand'], fn (Builder $query, string $brand) => $query
+                ->whereHas('carModel.carBrand', fn (Builder $inner) => $inner->where('name', $brand)))
             ->when($filters['state'] === 'hidden', fn (Builder $query) => $query->where('is_active', false))
             ->when($filters['state'] === 'out', fn (Builder $query) => $query->where('qty', 0))
-            ->orderBy('brand')
-            ->orderBy('model')
+            ->orderByDesc('id')
             ->paginate(15)
             ->withQueryString()
             ->through(fn (Product $item): array => (new ProductResource($item))->resolve());
@@ -47,7 +50,7 @@ class ProductController extends Controller
         return Inertia::render('admin/products/Index', [
             'products' => $products,
             'filters' => $filters,
-            'brands' => Product::query()->distinct()->orderBy('brand')->pluck('brand'),
+            'brands' => CarBrand::query()->orderBy('position')->pluck('name'),
         ]);
     }
 
@@ -120,15 +123,29 @@ class ProductController extends Controller
             $product->photo_old_path = null;
         }
 
-        if ($request->file('photo') instanceof UploadedFile) {
+        $photo = $request->file('photo');
+
+        if ($photo instanceof UploadedFile) {
             $this->deleteUpload($product->photo_path);
-            $product->photo_path = $request->file('photo')->store('products', 'public');
+            $product->photo_path = $this->storeUpload($photo);
         }
 
-        if ($request->file('photo_old') instanceof UploadedFile) {
+        $photoOld = $request->file('photo_old');
+
+        if ($photoOld instanceof UploadedFile) {
             $this->deleteUpload($product->photo_old_path);
-            $product->photo_old_path = $request->file('photo_old')->store('products', 'public');
+            $product->photo_old_path = $this->storeUpload($photoOld);
         }
+    }
+
+    /**
+     * Put an uploaded photo on the public disk, or keep the old one on failure.
+     */
+    private function storeUpload(UploadedFile $file): ?string
+    {
+        $path = $file->store('products', 'public');
+
+        return $path === false ? null : $path;
     }
 
     /**
@@ -155,13 +172,33 @@ class ProductController extends Controller
     }
 
     /**
-     * @return array{techs: list<string>, shapes: array<string, string>}
+     * Form options, including the car directory the product is fitted to.
+     *
+     * @return array{techs: list<string>, shapes: array<string, string>, cars: array<int, array<string, mixed>>}
      */
     private function options(): array
     {
+        $cars = CarBrand::query()
+            ->with(['models' => fn ($query) => $query->orderBy('name')])
+            ->orderBy('position')
+            ->get()
+            ->map(fn (CarBrand $brand): array => [
+                'id' => $brand->id,
+                'name' => $brand->name,
+                'models' => $brand->models->map(fn (CarModel $model): array => [
+                    'id' => $model->id,
+                    'name' => $model->name,
+                    'years' => $model->yearsLabel(),
+                    'year_from' => $model->year_from,
+                    'year_to' => $model->lastYear(),
+                ])->all(),
+            ])
+            ->all();
+
         return [
             'techs' => Product::TECHS,
             'shapes' => Product::SHAPES,
+            'cars' => $cars,
         ];
     }
 }

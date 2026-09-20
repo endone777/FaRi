@@ -2,9 +2,11 @@
 
 namespace Database\Seeders;
 
+use App\Models\CarModel;
 use App\Models\Product;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use RuntimeException;
 
 class CatalogSeeder extends Seeder
 {
@@ -13,6 +15,20 @@ class CatalogSeeder extends Seeder
     public function run(): void
     {
         foreach ($this->products() as $product) {
+            $carModel = CarModel::query()
+                ->whereRelation('carBrand', 'name', $product['brand'])
+                ->where('name', $product['model'])
+                ->first();
+
+            if ($carModel === null) {
+                throw new RuntimeException(
+                    "Нет в справочнике автомобилей: {$product['brand']} {$product['model']}",
+                );
+            }
+
+            unset($product['brand'], $product['model']);
+            $product['car_model_id'] = $carModel->id;
+
             Product::updateOrCreate(['slug' => $product['slug']], $product);
         }
     }

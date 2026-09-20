@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import { useCart } from '@/composables/useCart';
-import { money, SIDES } from '@/lib/fari';
+import { money } from '@/lib/fari';
 import checkout from '@/routes/checkout';
 
 const open = defineModel<boolean>('open', { default: false });
@@ -45,8 +45,7 @@ const { cart, setQty, remove } = useCart();
                             {{ line.product.brand }} {{ line.product.model }}
                         </div>
                         <div class="line-sub">
-                            {{ line.product.name }} ·
-                            {{ SIDES[line.side] ?? line.side }}
+                            {{ line.product.name }} · комплект
                         </div>
                         <div class="qty">
                             <button

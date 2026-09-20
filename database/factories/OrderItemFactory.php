@@ -24,7 +24,6 @@ class OrderItemFactory extends Factory
             'product_id' => null,
             'title' => 'BMW 3 Series (G20) — Adaptive LED в сборе',
             'oem' => fake()->bothify('DEMO-##-##-#-###-###'),
-            'side' => fake()->randomElement(['left', 'right']),
             'unit_price' => $price,
             'qty' => $qty,
             'line_total' => $price * $qty,

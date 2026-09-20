@@ -14,7 +14,6 @@ return new class extends Migration
             $table->foreignId('product_id')->nullable()->constrained()->nullOnDelete();
             $table->string('title');
             $table->string('oem')->nullable();
-            $table->string('side')->default('left');
             $table->unsignedInteger('unit_price');
             $table->unsignedInteger('qty');
             $table->unsignedInteger('line_total');

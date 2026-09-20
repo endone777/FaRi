@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Shop;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\DeliveryMethodResource;
 use App\Http\Resources\ProductResource;
+use App\Models\CarModel;
 use App\Models\DeliveryMethod;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Builder;
@@ -32,22 +33,30 @@ class CatalogController extends Controller
 
         $products = Product::query()
             ->active()
-            ->when($filters['brand'], fn (Builder $query, string $brand) => $query->where('brand', $brand))
-            ->when($filters['model'], fn (Builder $query, string $model) => $query->where('model', $model))
+            ->when($filters['brand'], fn (Builder $query, string $brand) => $query
+                ->whereHas('carModel.carBrand', fn (Builder $inner) => $inner->where('name', $brand)))
+            ->when($filters['model'], fn (Builder $query, string $model) => $query
+                ->whereRelation('carModel', 'name', $model))
             ->when($filters['tech'], fn (Builder $query, string $tech) => $query->where('tech', $tech))
             ->when($filters['year'], fn (Builder $query, int $year) => $query
                 ->where('year_from', '<=', $year)
                 ->where('year_to', '>=', $year))
             ->when($filters['q'], fn (Builder $query, string $term) => $query->where(
                 fn (Builder $inner) => $inner
-                    ->where('brand', 'like', "%{$term}%")
-                    ->orWhere('model', 'like', "%{$term}%")
-                    ->orWhere('name', 'like', "%{$term}%")
-                    ->orWhere('oem', 'like', "%{$term}%"),
+                    ->where('name', 'like', "%{$term}%")
+                    ->orWhere('oem', 'like', "%{$term}%")
+                    ->orWhereRelation('carModel', 'name', 'like', "%{$term}%")
+                    ->orWhereHas('carModel.carBrand', fn (Builder $brand) => $brand
+                        ->where('name', 'like', "%{$term}%")),
             ))
             ->when($filters['sort'] === 'price', fn (Builder $query) => $query->orderBy('price'))
             ->when($filters['sort'] === '-price', fn (Builder $query) => $query->orderByDesc('price'))
-            ->when($filters['sort'] === 'brand', fn (Builder $query) => $query->orderBy('brand')->orderBy('model'))
+            ->when($filters['sort'] === 'brand', fn (Builder $query) => $query->orderBy(
+                CarModel::query()
+                    ->select('car_brands.name')
+                    ->join('car_brands', 'car_brands.id', '=', 'car_models.car_brand_id')
+                    ->whereColumn('car_models.id', 'products.car_model_id'),
+            ))
             ->paginate(12)
             ->withQueryString()
             ->through(fn (Product $item): array => (new ProductResource($item))->resolve());
@@ -68,9 +77,9 @@ class CatalogController extends Controller
 
         $related = Product::query()
             ->active()
-            ->where('brand', $product->brand)
+            ->whereHas('carModel', fn (Builder $query) => $query
+                ->where('car_brand_id', $product->carModel?->car_brand_id))
             ->whereKeyNot($product->id)
-            ->orderBy('model')
             ->limit(3)
             ->get();
 
@@ -90,14 +99,33 @@ class CatalogController extends Controller
      */
     private function facets(): array
     {
-        $rows = Product::query()->active()->get(['brand', 'model', 'tech']);
+        $brands = [];
+        $models = [];
+        $techs = [];
+
+        foreach (Product::query()->active()->get() as $row) {
+            if ($row->brand !== '') {
+                $brands[$row->brand] = true;
+                $models[$row->brand][$row->model] = true;
+            }
+
+            $techs[$row->tech] = true;
+        }
+
+        ksort($brands);
+        ksort($techs);
 
         return [
-            'brands' => $rows->pluck('brand')->unique()->sort()->values()->all(),
-            'models' => $rows->groupBy('brand')
-                ->map(fn ($group) => $group->pluck('model')->unique()->sort()->values()->all())
-                ->all(),
-            'techs' => $rows->pluck('tech')->unique()->values()->all(),
+            'brands' => array_keys($brands),
+            'models' => array_map(
+                function (array $group): array {
+                    ksort($group);
+
+                    return array_keys($group);
+                },
+                $models,
+            ),
+            'techs' => array_keys($techs),
         ];
     }
 }

@@ -9,18 +9,13 @@ use Illuminate\Support\Collection;
 /**
  * Guest shopping cart kept in the session: ordering never requires an account.
  *
- * @phpstan-type CartLine array{key: string, product_id: int, side: string, qty: int}
+ * Headlights are sold as a pair, so a line is one product and a quantity of sets.
+ *
+ * @phpstan-type CartLine array{key: string, product_id: int, qty: int}
  */
 class Cart
 {
     private const KEY = 'cart';
-
-    /**
-     * The sides a headlight can be ordered for.
-     *
-     * @var array<string, string>
-     */
-    public const SIDES = ['left' => 'Левая', 'right' => 'Правая'];
 
     public function __construct(private readonly Session $session) {}
 
@@ -37,16 +32,14 @@ class Cart
         return $lines;
     }
 
-    public function add(Product $product, string $side = 'left', int $qty = 1): void
+    public function add(Product $product, int $qty = 1): void
     {
-        $side = isset(self::SIDES[$side]) ? $side : 'left';
-        $key = $this->key($product->id, $side);
+        $key = $this->key($product->id);
         $lines = $this->lines();
 
         $lines[$key] = [
             'key' => $key,
             'product_id' => $product->id,
-            'side' => $side,
             'qty' => min(99, ($lines[$key]['qty'] ?? 0) + max(1, $qty)),
         ];
 
@@ -86,7 +79,7 @@ class Cart
     /**
      * Cart lines joined with their products, dropping lines whose product is gone.
      *
-     * @return Collection<int, array{key: string, side: string, qty: int, product: Product, line_total: int}>
+     * @return Collection<int, array{key: string, qty: int, product: Product, line_total: int}>
      */
     public function detailed(): Collection
     {
@@ -109,7 +102,6 @@ class Cart
 
                 return [
                     'key' => $line['key'],
-                    'side' => $line['side'],
                     'qty' => $line['qty'],
                     'product' => $product,
                     'line_total' => $product->price * $line['qty'],
@@ -123,7 +115,6 @@ class Cart
                 $detailed->mapWithKeys(fn (array $line): array => [$line['key'] => [
                     'key' => $line['key'],
                     'product_id' => $line['product']->id,
-                    'side' => $line['side'],
                     'qty' => $line['qty'],
                 ]])->all(),
             );
@@ -154,8 +145,8 @@ class Cart
         return $this->lines() === [];
     }
 
-    private function key(int $productId, string $side): string
+    private function key(int $productId): string
     {
-        return $productId.'-'.$side;
+        return 'p'.$productId;
     }
 }

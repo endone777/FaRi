@@ -21,7 +21,7 @@ class HandleInertiaRequests extends Middleware
     /**
      * The guest cart, shared with every page so the drawer is always in sync.
      *
-     * @return array{lines: list<array<string, mixed>>, count: int, items_total: int, weight: float}
+     * @return array{lines: array<int, array<string, mixed>>, count: int, items_total: int, weight: float}
      */
     private function cart(Request $request): array
     {
@@ -36,10 +36,9 @@ class HandleInertiaRequests extends Middleware
         return [
             'lines' => $lines->map(fn (array $line): array => [
                 'key' => $line['key'],
-                'side' => $line['side'],
                 'qty' => $line['qty'],
                 'line_total' => $line['line_total'],
-                'product' => new ProductResource($line['product']),
+                'product' => (new ProductResource($line['product']))->resolve(),
             ])->all(),
             'count' => (int) $lines->sum('qty'),
             'items_total' => (int) $lines->sum('line_total'),

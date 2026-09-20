@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { Head, Link, router } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import BeforeAfter from '@/components/fari/BeforeAfter.vue';
-import CarStage from '@/components/fari/CarStage.vue';
+import FariSelect, { type FariOption } from '@/components/fari/FariSelect.vue';
 import ProductCard from '@/components/fari/ProductCard.vue';
 import { useCart } from '@/composables/useCart';
-import { beamColor, money, SIDES } from '@/lib/fari';
+import { beamColor, money } from '@/lib/fari';
 import catalog from '@/routes/catalog';
 import contacts from '@/routes/contacts';
 import { delivery } from '@/routes';
@@ -19,16 +19,31 @@ const { products, deliveryMethods } = defineProps<{
 
 const { add } = useCart();
 
-const brand = ref('');
-const model = ref('');
-const year = ref('');
-const tech = ref('');
-const side = ref('left');
+const brand = ref<string | null>(null);
+const model = ref<string | null>(null);
+const year = ref<number | null>(null);
+const tech = ref<string | null>(null);
 const fitted = ref<Product | null>(null);
 
 const brands = computed(() => [
     ...new Set(products.map((product) => product.brand)),
 ]);
+
+const brandOptions = computed<FariOption<string>[]>(() =>
+    brands.value.map((item) => ({ value: item, label: item })),
+);
+
+const modelOptions = computed<FariOption<string>[]>(() =>
+    models.value.map((item) => ({ value: item, label: item })),
+);
+
+const yearOptions = computed<FariOption<number>[]>(() =>
+    years.value.map((item) => ({ value: item, label: String(item) })),
+);
+
+const techOptions = computed<FariOption<string>[]>(() =>
+    ['LED', 'Ксенон', 'Галоген'].map((item) => ({ value: item, label: item })),
+);
 
 const models = computed(() =>
     brand.value
@@ -91,35 +106,29 @@ const fitting = computed(() =>
 
 const featured = computed(() => products.slice(0, 6));
 
-const stageTitle = computed(() =>
-    brand.value
-        ? `${brand.value} ${model.value || '—'}${year.value ? `, ${year.value}` : ''}`
-        : 'Выберите автомобиль',
-);
-
-function onBrandChange(): void {
-    model.value = '';
-    year.value = '';
+watch(brand, () => {
+    model.value = null;
+    year.value = null;
     fitted.value = null;
-}
+});
 
-function onModelChange(): void {
-    year.value = '';
-}
+watch(model, () => {
+    year.value = null;
+});
 
 function search(): void {
     router.get(catalog.index().url, {
-        brand: brand.value || undefined,
-        model: model.value || undefined,
-        year: year.value || undefined,
-        tech: tech.value || undefined,
+        brand: brand.value ?? undefined,
+        model: model.value ?? undefined,
+        year: year.value ?? undefined,
+        tech: tech.value ?? undefined,
     });
 }
 
 function fit(product: Product): void {
     fitted.value = product;
 
-    if (!brand.value) {
+    if (brand.value === null) {
         brand.value = product.brand;
         model.value = product.model;
     }
@@ -142,9 +151,8 @@ function fit(product: Product): void {
                 <h1>Свет, который <em>встаёт</em> на вашу машину</h1>
                 <p class="hero-lead">
                     Выберите марку, модель и год — каталог оставит только
-                    подходящее. Нажмите на фару: она встанет на место в схеме
-                    вашего автомобиля, а слайдер покажет, как было и как станет.
-                    Заказ оформляется без регистрации.
+                    подходящее. Оптика продаётся комплектом: левая и правая фара
+                    в одной коробке. Заказ оформляется без регистрации.
                 </p>
             </div>
 
@@ -157,51 +165,51 @@ function fit(product: Product): void {
             <div class="picker">
                 <div class="picker-cell">
                     <label for="sel-brand">Марка</label>
-                    <select
+                    <FariSelect
                         id="sel-brand"
                         v-model="brand"
-                        @change="onBrandChange"
-                    >
-                        <option value="">Выберите</option>
-                        <option v-for="item in brands" :key="item">
-                            {{ item }}
-                        </option>
-                    </select>
+                        :options="brandOptions"
+                        clearable
+                        placeholder="Выберите"
+                        search-placeholder="BMW, Audi…"
+                    />
                 </div>
 
                 <div class="picker-cell">
                     <label for="sel-model">Модель</label>
-                    <select
+                    <FariSelect
                         id="sel-model"
                         v-model="model"
-                        :disabled="!brand"
-                        @change="onModelChange"
-                    >
-                        <option value="">—</option>
-                        <option v-for="item in models" :key="item">
-                            {{ item }}
-                        </option>
-                    </select>
+                        :options="modelOptions"
+                        :disabled="brand === null"
+                        clearable
+                        placeholder="—"
+                        search-placeholder="Модель или поколение"
+                    />
                 </div>
 
                 <div class="picker-cell">
                     <label for="sel-year">Год выпуска</label>
-                    <select id="sel-year" v-model="year" :disabled="!model">
-                        <option value="">—</option>
-                        <option v-for="item in years" :key="item">
-                            {{ item }}
-                        </option>
-                    </select>
+                    <FariSelect
+                        id="sel-year"
+                        v-model="year"
+                        :options="yearOptions"
+                        :disabled="model === null"
+                        clearable
+                        placeholder="—"
+                        search-placeholder="2018"
+                    />
                 </div>
 
                 <div class="picker-cell">
                     <label for="sel-tech">Тип света</label>
-                    <select id="sel-tech" v-model="tech">
-                        <option value="">Любой</option>
-                        <option>LED</option>
-                        <option>Ксенон</option>
-                        <option>Галоген</option>
-                    </select>
+                    <FariSelect
+                        id="sel-tech"
+                        v-model="tech"
+                        :options="techOptions"
+                        clearable
+                        placeholder="Любой"
+                    />
                 </div>
 
                 <button class="picker-go" type="button" @click="search">
@@ -226,59 +234,16 @@ function fit(product: Product): void {
         <div class="fit">
             <div class="fit-visuals">
                 <BeforeAfter :product="fitted" />
-
-                <div>
-                    <div class="stage">
-                        <div class="stage-label">
-                            <span class="eyebrow">Схема установки</span>
-                            <strong>{{ stageTitle }}</strong>
-                        </div>
-                        <CarStage
-                            :brand="brand || 'BMW'"
-                            :fitted="fitted"
-                            :side="side"
-                        />
-                    </div>
-
-                    <div class="stage-foot">
-                        <span>
-                            Позиция:
-                            <b>{{ fitted ? SIDES[side].toLowerCase() : '—' }}</b>
-                        </span>
-                        <span>Источник: <b>{{ fitted?.tech ?? '—' }}</b></span>
-                        <span>
-                            Температура:
-                            <b>
-                                {{ fitted ? `${fitted.color_temp}K` : '—' }}
-                            </b>
-                        </span>
-                        <span>Артикул: <b>{{ fitted?.oem ?? '—' }}</b></span>
-                    </div>
-                </div>
             </div>
 
             <div class="fit-list">
                 <div class="fit-list-head">
                     <h3>Подходит</h3>
-                    <div
-                        class="side-toggle"
-                        role="group"
-                        aria-label="Сторона установки"
-                    >
-                        <button
-                            v-for="(label, value) in SIDES"
-                            :key="value"
-                            type="button"
-                            :aria-pressed="side === value"
-                            @click="side = value"
-                        >
-                            {{ label }}
-                        </button>
-                    </div>
+                    <span class="opt-meta">цена за комплект</span>
                 </div>
 
                 <div>
-                    <div v-if="!brand" class="empty">
+                    <div v-if="brand === null" class="empty">
                         Выберите марку в подборщике — покажем, что подходит.
                     </div>
                     <div v-else-if="fitting.length === 0" class="empty">
@@ -324,7 +289,7 @@ function fit(product: Product): void {
                 <h2>Популярная оптика</h2>
             </div>
             <p>
-                Нажмите на фотографию — фара встанет в схему вашей машины.
+                Нажмите на фотографию — покажем её в примерке «было / стало».
                 Нажмите на название — откроется карточка с описанием,
                 характеристиками и доставкой.
             </p>
@@ -337,7 +302,7 @@ function fit(product: Product): void {
                 :product="item"
                 :fits="brand === item.brand"
                 @fit="fit"
-                @add="add($event, side)"
+                @add="add($event)"
                 @notify="router.visit(contacts.index().url)"
             />
         </div>
@@ -370,7 +335,9 @@ function fit(product: Product): void {
                 <h4>{{ method.name }}</h4>
                 <div class="ship-meta">
                     <span class="num">
-                        {{ method.cost === 0 ? 'бесплатно' : money(method.cost) }}
+                        {{
+                            method.cost === 0 ? 'бесплатно' : money(method.cost)
+                        }}
                     </span>
                     <span>{{ method.days }}</span>
                 </div>

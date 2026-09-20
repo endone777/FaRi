@@ -69,7 +69,6 @@ class CheckoutController extends Controller
                     'product_id' => $line['product']->id,
                     'title' => $line['product']->title(),
                     'oem' => $line['product']->oem,
-                    'side' => $line['side'],
                     'unit_price' => $line['product']->price,
                     'qty' => $line['qty'],
                     'line_total' => $line['line_total'],

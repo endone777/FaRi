@@ -2,12 +2,15 @@
 import { computed, useId } from 'vue';
 import { beamColor, SHAPES } from '@/lib/fari';
 
-const { shape = 'sharp', colorTemp = 5000, label = 'Схема фары' } =
-    defineProps<{
-        shape?: string;
-        colorTemp?: number;
-        label?: string;
-    }>();
+const {
+    shape = 'sharp',
+    colorTemp = 5000,
+    label = 'Схема фары',
+} = defineProps<{
+    shape?: string;
+    colorTemp?: number;
+    label?: string;
+}>();
 
 const uid = useId();
 const glow = computed(() => beamColor(colorTemp));

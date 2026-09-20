@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Head, router } from '@inertiajs/vue3';
 import { computed, reactive, watch } from 'vue';
+import FariSelect, { type FariOption } from '@/components/fari/FariSelect.vue';
 import Pagination from '@/components/fari/Pagination.vue';
 import ProductCard from '@/components/fari/ProductCard.vue';
 import { useCart } from '@/composables/useCart';
@@ -28,10 +29,10 @@ const { products, filters, facets } = defineProps<{
 const { add } = useCart();
 
 const form = reactive({
-    brand: filters.brand ?? '',
-    model: filters.model ?? '',
-    year: filters.year ? String(filters.year) : '',
-    tech: filters.tech ?? '',
+    brand: filters.brand,
+    model: filters.model,
+    year: filters.year,
+    tech: filters.tech,
     q: filters.q ?? '',
     sort: filters.sort,
 });
@@ -40,16 +41,34 @@ const models = computed(() =>
     form.brand ? (facets.models[form.brand] ?? []) : [],
 );
 
+const brandOptions = computed<FariOption<string>[]>(() =>
+    facets.brands.map((item) => ({ value: item, label: item })),
+);
+
+const modelOptions = computed<FariOption<string>[]>(() =>
+    models.value.map((item) => ({ value: item, label: item })),
+);
+
+const techOptions = computed<FariOption<string>[]>(() =>
+    facets.techs.map((item) => ({ value: item, label: item })),
+);
+
+const sortOptions: FariOption<string>[] = [
+    { value: 'brand', label: 'По марке' },
+    { value: 'price', label: 'Сначала дешевле' },
+    { value: '-price', label: 'Сначала дороже' },
+];
+
 const total = computed(() => products.total ?? products.data.length);
 
 function apply(): void {
     router.get(
         catalogRoutes.index().url,
         {
-            brand: form.brand || undefined,
-            model: form.model || undefined,
-            year: form.year || undefined,
-            tech: form.tech || undefined,
+            brand: form.brand ?? undefined,
+            model: form.model ?? undefined,
+            year: form.year ?? undefined,
+            tech: form.tech ?? undefined,
             q: form.q || undefined,
             sort: form.sort !== 'brand' ? form.sort : undefined,
         },
@@ -58,10 +77,10 @@ function apply(): void {
 }
 
 function reset(): void {
-    form.brand = '';
-    form.model = '';
-    form.year = '';
-    form.tech = '';
+    form.brand = null;
+    form.model = null;
+    form.year = null;
+    form.tech = null;
     form.q = '';
     form.sort = 'brand';
     apply();
@@ -70,7 +89,7 @@ function reset(): void {
 watch(
     () => form.brand,
     () => {
-        form.model = '';
+        form.model = null;
     },
 );
 
@@ -90,7 +109,8 @@ function openProduct(product: Product): void {
             </div>
             <p>
                 Фильтры работают по марке, модели, году выпуска и источнику
-                света. Заказ можно оформить без регистрации.
+                света. Цена указана за комплект из двух фар, заказ можно
+                оформить без регистрации.
             </p>
         </div>
 
@@ -102,20 +122,29 @@ function openProduct(product: Product): void {
                 placeholder="Поиск по марке, модели, артикулу"
             />
 
-            <select v-model="form.brand" @change="apply">
-                <option value="">Все марки</option>
-                <option v-for="brand in facets.brands" :key="brand">
-                    {{ brand }}
-                </option>
-            </select>
+            <FariSelect
+                v-model="form.brand"
+                class="filter-cell"
+                :options="brandOptions"
+                clearable
+                placeholder="Все марки"
+                search-placeholder="BMW, Audi…"
+                @update:model-value="apply"
+            />
 
-            <select v-model="form.model" :disabled="!form.brand" @change="apply">
-                <option value="">Все модели</option>
-                <option v-for="model in models" :key="model">{{ model }}</option>
-            </select>
+            <FariSelect
+                v-model="form.model"
+                class="filter-cell"
+                :options="modelOptions"
+                :disabled="!form.brand"
+                clearable
+                placeholder="Все модели"
+                search-placeholder="Модель или поколение"
+                @update:model-value="apply"
+            />
 
             <input
-                v-model="form.year"
+                v-model.number="form.year"
                 class="year-input"
                 type="number"
                 min="1950"
@@ -124,18 +153,22 @@ function openProduct(product: Product): void {
                 @change="apply"
             />
 
-            <select v-model="form.tech" @change="apply">
-                <option value="">Любой свет</option>
-                <option v-for="tech in facets.techs" :key="tech">
-                    {{ tech }}
-                </option>
-            </select>
+            <FariSelect
+                v-model="form.tech"
+                class="filter-cell"
+                :options="techOptions"
+                clearable
+                placeholder="Любой свет"
+                @update:model-value="apply"
+            />
 
-            <select v-model="form.sort" @change="apply">
-                <option value="brand">По марке</option>
-                <option value="price">Сначала дешевле</option>
-                <option value="-price">Сначала дороже</option>
-            </select>
+            <FariSelect
+                v-model="form.sort"
+                class="filter-cell"
+                :options="sortOptions"
+                placeholder="По марке"
+                @update:model-value="apply"
+            />
 
             <button class="btn btn-primary" type="submit">Найти</button>
             <button class="btn" type="button" @click="reset">Сбросить</button>
@@ -153,7 +186,7 @@ function openProduct(product: Product): void {
                 :product="item"
                 :show-fit-button="false"
                 @fit="openProduct"
-                @add="add($event, 'left')"
+                @add="add($event)"
                 @notify="router.visit(contacts.index().url)"
             />
         </div>
@@ -170,5 +203,13 @@ function openProduct(product: Product): void {
 
 .year-input {
     width: 110px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    padding: 9px 12px;
+}
+
+.filter-cell {
+    min-width: 190px;
 }
 </style>

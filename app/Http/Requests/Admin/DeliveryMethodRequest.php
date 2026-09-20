@@ -16,7 +16,7 @@ class DeliveryMethodRequest extends FormRequest
         return [
             'code' => [
                 'required', 'string', 'max:40', 'alpha_dash',
-                Rule::unique('delivery_methods', 'code')->ignore($this->route('delivery_method')),
+                Rule::unique('delivery_methods', 'code')->ignore($this->route('deliveryMethod')),
             ],
             'name' => ['required', 'string', 'max:120'],
             'cost' => ['required', 'integer', 'min:0', 'max:1000000'],

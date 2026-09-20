@@ -25,7 +25,7 @@ class CartController extends Controller
     {
         $product = Product::query()->findOrFail($request->integer('product_id'));
 
-        $this->cart->add($product, $request->string('side')->toString(), $request->integer('qty') ?: 1);
+        $this->cart->add($product, $request->integer('qty') ?: 1);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Добавлено в корзину']);
 

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\CallbackRequestController;
+use App\Http\Controllers\Admin\CarDirectoryController;
 use App\Http\Controllers\Admin\ContactMessageController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DeliveryMethodController;
@@ -56,7 +57,12 @@ Route::middleware(['auth', EnsureUserIsAdmin::class])
     ->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
 
-        Route::resource('products', ProductController::class)->except('show');
+        Route::get('products', [ProductController::class, 'index'])->name('products.index');
+        Route::get('products/create', [ProductController::class, 'create'])->name('products.create');
+        Route::post('products', [ProductController::class, 'store'])->name('products.store');
+        Route::get('products/{product:id}/edit', [ProductController::class, 'edit'])->name('products.edit');
+        Route::put('products/{product:id}', [ProductController::class, 'update'])->name('products.update');
+        Route::delete('products/{product:id}', [ProductController::class, 'destroy'])->name('products.destroy');
 
         Route::get('orders', [OrderController::class, 'index'])->name('orders.index');
         Route::get('orders/{order}', [OrderController::class, 'show'])->name('orders.show');
@@ -70,6 +76,14 @@ Route::middleware(['auth', EnsureUserIsAdmin::class])
         Route::get('messages', [ContactMessageController::class, 'index'])->name('messages.index');
         Route::patch('messages/{message}', [ContactMessageController::class, 'update'])->name('messages.update');
         Route::delete('messages/{message}', [ContactMessageController::class, 'destroy'])->name('messages.destroy');
+
+        Route::get('cars', [CarDirectoryController::class, 'index'])->name('cars.index');
+        Route::post('cars/brands', [CarDirectoryController::class, 'storeBrand'])->name('cars.brands.store');
+        Route::patch('cars/brands/{carBrand}', [CarDirectoryController::class, 'updateBrand'])->name('cars.brands.update');
+        Route::delete('cars/brands/{carBrand}', [CarDirectoryController::class, 'destroyBrand'])->name('cars.brands.destroy');
+        Route::post('cars/models', [CarDirectoryController::class, 'storeModel'])->name('cars.models.store');
+        Route::patch('cars/models/{carModel}', [CarDirectoryController::class, 'updateModel'])->name('cars.models.update');
+        Route::delete('cars/models/{carModel}', [CarDirectoryController::class, 'destroyModel'])->name('cars.models.destroy');
 
         Route::get('delivery', [DeliveryMethodController::class, 'index'])->name('delivery.index');
         Route::post('delivery', [DeliveryMethodController::class, 'store'])->name('delivery.store');

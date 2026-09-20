@@ -2,6 +2,8 @@
 
 namespace Database\Factories;
 
+use App\Models\CarBrand;
+use App\Models\CarModel;
 use App\Models\Product;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -20,8 +22,7 @@ class ProductFactory extends Factory
 
         return [
             'slug' => Str::random(10),
-            'brand' => fake()->randomElement(['BMW', 'Audi', 'Volkswagen', 'Toyota']),
-            'model' => fake()->bothify('Model ##'),
+            'car_model_id' => CarModel::factory(),
             'year_from' => $from,
             'year_to' => $from + fake()->numberBetween(2, 6),
             'name' => 'Фара в сборе',
@@ -39,6 +40,28 @@ class ProductFactory extends Factory
             'description' => fake()->paragraph(),
             'is_active' => true,
         ];
+    }
+
+    /**
+     * Fit the product to a car of the given make, creating the directory entry.
+     */
+    public function forCar(string $brand, ?string $model = null): static
+    {
+        return $this->state(function () use ($brand, $model): array {
+            $carBrand = CarBrand::firstOrCreate(
+                ['name' => $brand],
+                ['slug' => Str::slug($brand), 'position' => 0],
+            );
+
+            $name = $model ?? fake()->unique()->bothify('Model ##?');
+
+            $carModel = CarModel::firstOrCreate(
+                ['car_brand_id' => $carBrand->id, 'name' => $name],
+                ['slug' => Str::slug($name), 'year_from' => 2010, 'year_to' => null],
+            );
+
+            return ['car_model_id' => $carModel->id];
+        });
     }
 
     public function outOfStock(): static
