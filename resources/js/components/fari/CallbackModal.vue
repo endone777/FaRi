@@ -95,6 +95,15 @@ watch(open, (value) => {
     max-width: 420px;
 }
 
+@media (max-width: 720px) {
+    .modal-narrow {
+        max-width: none;
+        min-height: 100%;
+        border: 0;
+        border-radius: 0;
+    }
+}
+
 .panel-flat {
     border: 0;
     box-shadow: none;

@@ -579,4 +579,28 @@ watch(
     color: var(--text-mute);
     font-size: var(--step--1);
 }
+
+@media (max-width: 720px) {
+    .fsel-trigger {
+        min-height: 44px;
+        font-size: 16px;
+    }
+
+    .fsel-panel {
+        font-size: 16px;
+    }
+
+    .fsel-search input {
+        font-size: 16px;
+        padding: 10px 12px;
+    }
+
+    .fsel-option {
+        min-height: 44px;
+    }
+
+    .fsel-list {
+        max-height: 50vh;
+    }
+}
 </style>

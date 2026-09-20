@@ -30,8 +30,8 @@ const { cart, setQty, remove, clear } = useCart();
         </div>
 
         <template v-else>
-            <div class="tbl-wrap">
-                <table>
+            <div class="tbl-wrap cart-wrap">
+                <table class="cart-table">
                     <thead>
                         <tr>
                             <th>Позиция</th>
@@ -57,8 +57,10 @@ const { cart, setQty, remove, clear } = useCart();
                                     {{ line.product.oem }}
                                 </div>
                             </td>
-                            <td class="num">{{ money(line.product.price) }}</td>
-                            <td>
+                            <td class="num" data-label="Цена">
+                                {{ money(line.product.price) }}
+                            </td>
+                            <td data-label="Комплектов">
                                 <div class="qty">
                                     <button
                                         type="button"
@@ -77,7 +79,9 @@ const { cart, setQty, remove, clear } = useCart();
                                     </button>
                                 </div>
                             </td>
-                            <td class="num">{{ money(line.line_total) }}</td>
+                            <td class="num" data-label="Сумма">
+                                {{ money(line.line_total) }}
+                            </td>
                             <td>
                                 <div class="row-acts">
                                     <button
@@ -126,6 +130,70 @@ const { cart, setQty, remove, clear } = useCart();
 .section-title {
     display: grid;
     gap: 8px;
+}
+
+/* На телефоне таблица разворачивается в карточки. */
+@media (max-width: 720px) {
+    .cart-wrap {
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+        overflow: visible;
+    }
+
+    .cart-table {
+        min-width: 0;
+        display: block;
+    }
+
+    .cart-table thead {
+        display: none;
+    }
+
+    .cart-table tbody,
+    .cart-table tr,
+    .cart-table td {
+        display: block;
+        width: 100%;
+    }
+
+    .cart-table tr {
+        margin-bottom: 12px;
+        padding: 14px 16px;
+        border: 1px solid var(--line);
+        border-radius: var(--r-lg);
+        background: var(--surface);
+        box-shadow: var(--shadow);
+    }
+
+    .cart-table td {
+        border: 0;
+        padding: 5px 0;
+    }
+
+    .cart-table td[data-label] {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .cart-table td[data-label]::before {
+        content: attr(data-label);
+        font-family: var(--f-data);
+        font-size: 0.68rem;
+        letter-spacing: 0.11em;
+        text-transform: uppercase;
+        color: var(--text-mute);
+    }
+
+    .cart-table .row-acts {
+        justify-content: stretch;
+    }
+
+    .cart-table .row-acts .btn {
+        width: 100%;
+    }
 }
 
 .cart-foot {

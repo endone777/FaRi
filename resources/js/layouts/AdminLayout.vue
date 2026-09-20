@@ -63,7 +63,7 @@ function signOut(): void {
                     <span class="logo-beam" />FARI <small>админка</small>
                 </Link>
 
-                <div class="top-actions admin-actions">
+                <div class="top-actions top-actions-admin admin-actions">
                     <Link class="icon-btn" :href="home()">← На сайт</Link>
                     <ThemeToggle />
                     <button class="icon-btn" type="button" @click="signOut">

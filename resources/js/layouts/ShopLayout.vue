@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import CartDrawer from '@/components/fari/CartDrawer.vue';
 import ThemeToggle from '@/components/fari/ThemeToggle.vue';
 import { useCart } from '@/composables/useCart';
@@ -15,6 +15,33 @@ const { cart } = useCart();
 
 const drawerOpen = ref(false);
 const callbackOpen = ref(false);
+const menuOpen = ref(false);
+
+const links = computed(() => [
+    { label: 'Каталог', href: catalog.index(), match: '/catalog' },
+    { label: 'Доставка', href: delivery(), match: '/delivery' },
+    { label: 'Контакты', href: contacts.index(), match: '/contacts' },
+    ...(isAdmin.value
+        ? [{ label: 'Админка', href: adminDashboard(), match: '/admin' }]
+        : []),
+]);
+
+function isOn(match: string): boolean {
+    return page.url.split('?')[0].startsWith(match);
+}
+
+function requestCallback(): void {
+    menuOpen.value = false;
+    callbackOpen.value = true;
+}
+
+// Переход по ссылке закрывает меню.
+watch(
+    () => page.url,
+    () => {
+        menuOpen.value = false;
+    },
+);
 
 const isAdmin = computed(() => page.props.isAdmin === true);
 </script>
@@ -28,13 +55,16 @@ const isAdmin = computed(() => page.props.isAdmin === true);
                 </Link>
 
                 <nav class="nav">
-                    <Link :href="catalog.index()">Каталог</Link>
-                    <Link :href="delivery()">Доставка</Link>
-                    <Link :href="contacts.index()">Контакты</Link>
-                    <Link v-if="isAdmin" :href="adminDashboard()">Админка</Link>
+                    <Link
+                        v-for="link in links"
+                        :key="link.label"
+                        :href="link.href"
+                    >
+                        {{ link.label }}
+                    </Link>
                 </nav>
 
-                <div class="top-actions">
+                <div class="top-actions top-actions-shop">
                     <button
                         class="icon-btn"
                         type="button"
@@ -44,12 +74,24 @@ const isAdmin = computed(() => page.props.isAdmin === true);
                     </button>
                     <ThemeToggle />
                     <button
-                        class="icon-btn"
+                        class="icon-btn icon-btn-cart"
                         type="button"
+                        :aria-label="`Корзина, товаров: ${cart.count}`"
                         @click="drawerOpen = true"
                     >
-                        Корзина
+                        <span class="cart-label">Корзина</span>
                         <span class="cart-count">{{ cart.count }}</span>
+                    </button>
+                    <button
+                        class="burger"
+                        type="button"
+                        aria-label="Меню"
+                        :aria-expanded="menuOpen"
+                        @click="menuOpen = true"
+                    >
+                        <span />
+                        <span />
+                        <span />
                     </button>
                 </div>
             </div>
@@ -88,6 +130,54 @@ const isAdmin = computed(() => page.props.isAdmin === true);
                 </div>
             </div>
         </footer>
+
+        <div
+            class="scrim"
+            :class="{ on: menuOpen }"
+            @click="menuOpen = false"
+        />
+
+        <nav
+            class="mobile-nav"
+            :class="{ on: menuOpen }"
+            aria-label="Меню сайта"
+        >
+            <div class="mobile-nav-head">
+                <Link class="logo" :href="home()" @click="menuOpen = false">
+                    <span class="logo-beam" />FARI
+                </Link>
+                <button
+                    class="x"
+                    type="button"
+                    aria-label="Закрыть меню"
+                    @click="menuOpen = false"
+                >
+                    ×
+                </button>
+            </div>
+
+            <div class="mobile-nav-links">
+                <Link
+                    v-for="link in links"
+                    :key="link.label"
+                    :href="link.href"
+                    :class="{ on: isOn(link.match) }"
+                >
+                    {{ link.label }}
+                </Link>
+            </div>
+
+            <div class="mobile-nav-foot">
+                <button
+                    class="btn btn-primary btn-wide"
+                    type="button"
+                    @click="requestCallback"
+                >
+                    Заказать звонок
+                </button>
+                <ThemeToggle class="btn-wide" />
+            </div>
+        </nav>
 
         <CartDrawer v-model:open="drawerOpen" />
         <CallbackModal v-model:open="callbackOpen" />

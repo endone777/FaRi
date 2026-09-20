@@ -212,4 +212,12 @@ function openProduct(product: Product): void {
 .filter-cell {
     min-width: 190px;
 }
+
+@media (max-width: 720px) {
+    .year-input,
+    .filter-cell {
+        width: 100%;
+        min-width: 0;
+    }
+}
 </style>

@@ -1856,3 +1856,315 @@
         position: static;
     }
 }
+
+/* ── Мобильная навигация ─────────────────────────────────── */
+
+.fari .burger {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    cursor: pointer;
+}
+
+.fari .burger span {
+    display: block;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--text);
+    transition:
+        transform 0.2s ease,
+        opacity 0.2s ease;
+}
+
+.fari .burger[aria-expanded='true'] span:nth-child(1) {
+    transform: translateY(7px) rotate(45deg);
+}
+
+.fari .burger[aria-expanded='true'] span:nth-child(2) {
+    opacity: 0;
+}
+
+.fari .burger[aria-expanded='true'] span:nth-child(3) {
+    transform: translateY(-7px) rotate(-45deg);
+}
+
+.fari .mobile-nav {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: min(320px, 86vw);
+    z-index: 60;
+    background: var(--bg);
+    border-inline-end: 1px solid var(--line);
+    transform: translateX(-102%);
+    transition: transform 0.24s ease;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    box-shadow: var(--shadow-lg);
+}
+
+.fari .mobile-nav.on {
+    transform: none;
+}
+
+.fari .mobile-nav-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+}
+
+.fari .mobile-nav-links {
+    display: grid;
+    align-content: start;
+    gap: 2px;
+    padding: 12px;
+    overflow-y: auto;
+}
+
+.fari .mobile-nav-links a {
+    display: flex;
+    align-items: center;
+    min-height: 48px;
+    padding: 0 14px;
+    border-radius: var(--r-md);
+    text-decoration: none;
+    font-weight: 600;
+    color: var(--text-dim);
+}
+
+.fari .mobile-nav-links a:hover,
+.fari .mobile-nav-links a.on {
+    background: var(--surface-2);
+    color: var(--text);
+}
+
+.fari .mobile-nav-foot {
+    display: grid;
+    gap: 10px;
+    padding: 16px 18px;
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+}
+
+/* ── Планшет ─────────────────────────────────────────────── */
+
+@media (max-width: 940px) {
+    .fari .burger {
+        display: flex;
+    }
+
+    .fari .top-in {
+        gap: 12px;
+    }
+
+    .fari .top-actions {
+        margin-inline-start: auto;
+    }
+}
+
+/* ── Телефон ─────────────────────────────────────────────── */
+
+@media (max-width: 720px) {
+    .fari .wrap {
+        padding-inline: 16px;
+    }
+
+    .fari .section {
+        padding-block: 40px;
+    }
+
+    .fari .top-in {
+        height: 60px;
+        gap: 10px;
+    }
+
+    /* На витрине звонок и смена темы переезжают в меню. */
+    .fari .top-actions-shop .icon-btn:not(.icon-btn-cart) {
+        display: none;
+    }
+
+    /* В шапке админки кнопок мало — даём им перенестись. */
+    .fari .top-actions-admin {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+    }
+
+    .fari .top-actions-admin .icon-btn {
+        padding: 0 10px;
+        font-size: var(--step--1);
+    }
+
+    .fari .hero-in {
+        padding-block: 34px 30px;
+        gap: 24px;
+    }
+
+    .fari .hero h1 {
+        max-width: none;
+    }
+
+    .fari .hero-lead {
+        max-width: none;
+    }
+
+    .fari .section-head {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .fari .picker {
+        grid-template-columns: 1fr;
+    }
+
+    .fari .picker-cell {
+        padding: 12px 14px;
+    }
+
+    .fari .grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .fari .forms,
+    .fari .ship-grid,
+    .fari .calc,
+    .fari .row2,
+    .fari .fit {
+        grid-template-columns: 1fr;
+    }
+
+    .fari .panel {
+        padding: 18px;
+    }
+
+    .fari .foot-in {
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .fari .drawer {
+        width: 100%;
+    }
+
+    .fari .modal {
+        padding: 0;
+    }
+
+    .fari .modal-card {
+        max-width: none;
+        min-height: 100%;
+        border: 0;
+        border-radius: 0;
+        margin-block: 0;
+    }
+
+    /* Пальцем нужно попадать без прицеливания. */
+    .fari .btn,
+    .fari .icon-btn,
+    .fari .picker-go {
+        min-height: 44px;
+    }
+
+    .fari .btn-sm {
+        min-height: 36px;
+    }
+
+    /* iOS зумит страницу, если поле мельче 16px. */
+    .fari input,
+    .fari select,
+    .fari textarea {
+        font-size: 16px;
+    }
+
+    .fari .card-buy {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .fari .opt {
+        grid-template-columns: 44px minmax(0, 1fr);
+        row-gap: 8px;
+    }
+
+    .fari .opt-price {
+        grid-column: 2;
+        text-align: start;
+    }
+
+    .fari .stage-foot {
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    /* Таблицы админки прокручиваются вбок, не растягивая страницу. */
+    .fari .tbl-wrap {
+        overscroll-behavior-x: contain;
+    }
+
+    .fari .admin-nav {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        gap: 4px;
+    }
+
+    .fari .admin-nav a {
+        white-space: nowrap;
+    }
+
+    .fari .stat-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 10px;
+    }
+
+    .fari .stat {
+        padding: 14px;
+    }
+
+    .fari .stat b {
+        font-size: var(--step-2);
+    }
+
+    .fari .toolbar > * {
+        width: 100%;
+    }
+
+    .fari .toolbar .grow {
+        min-width: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    /* В шапке остаётся только счётчик корзины. */
+    .fari .cart-label {
+        display: none;
+    }
+
+    .fari .icon-btn-cart {
+        padding: 0 10px;
+    }
+}
+
+@media (max-width: 420px) {
+    .fari .shape-pick {
+        grid-template-columns: 1fr;
+    }
+
+    .fari .row-acts {
+        flex-wrap: wrap;
+    }
+}
