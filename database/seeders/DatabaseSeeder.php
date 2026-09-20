@@ -15,11 +15,14 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        User::updateOrCreate(
+            ['email' => 'admin@fari.test'],
+            ['name' => 'Администратор', 'password' => 'password', 'is_admin' => true],
+        );
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            DeliveryMethodSeeder::class,
+            CatalogSeeder::class,
         ]);
     }
 }

@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /**
  * @property int $id
@@ -69,6 +71,41 @@ class Product extends Model
     public function isInStock(): bool
     {
         return $this->qty > 0;
+    }
+
+    public function photoUrl(): ?string
+    {
+        return $this->urlFor($this->photo_path);
+    }
+
+    public function photoOldUrl(): ?string
+    {
+        return $this->urlFor($this->photo_old_path);
+    }
+
+    public function title(): string
+    {
+        return $this->brand.' '.$this->model.' — '.$this->name;
+    }
+
+    /**
+     * Seeded photos ship with the app in public/, uploaded ones live on the public disk.
+     */
+    private function urlFor(?string $path): ?string
+    {
+        if (blank($path)) {
+            return null;
+        }
+
+        if (Str::startsWith($path, ['http://', 'https://', '/'])) {
+            return $path;
+        }
+
+        if (Str::startsWith($path, 'images/')) {
+            return asset($path);
+        }
+
+        return Storage::disk('public')->url($path);
     }
 
     /**
