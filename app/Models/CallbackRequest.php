@@ -1,0 +1,34 @@
+<?php
+
+namespace App\Models;
+
+use Database\Factories\CallbackRequestFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
+
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $phone
+ * @property string|null $preferred_time
+ * @property string $status
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
+#[Fillable(['name', 'phone', 'preferred_time', 'status'])]
+class CallbackRequest extends Model
+{
+    /** @use HasFactory<CallbackRequestFactory> */
+    use HasFactory;
+
+    /**
+     * @var array<string, string>
+     */
+    public const STATUSES = [
+        'new' => 'Новая',
+        'called' => 'Дозвонились',
+        'closed' => 'Закрыта',
+    ];
+}
