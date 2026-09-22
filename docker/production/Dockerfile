@@ -47,8 +47,17 @@ WORKDIR /var/www/html
 
 COPY --from=build --chown=www-data:www-data /app /var/www/html
 
+# nginx работает под www-data, поэтому и его временные каталоги — тоже.
+# Без этого тело multipart-запроса с файлом некуда сбросить, и загрузка
+# фотографии падает с 500 ещё до PHP.
 RUN chmod +x /usr/local/bin/entrypoint \
-    && mkdir -p /var/log/supervisor /run/nginx \
+    && mkdir -p /var/log/supervisor /var/log/nginx /run/nginx \
+        /var/lib/nginx/tmp/client_body \
+        /var/lib/nginx/tmp/fastcgi \
+        /var/lib/nginx/tmp/proxy \
+        /var/lib/nginx/tmp/scgi \
+        /var/lib/nginx/tmp/uwsgi \
+    && chown -R www-data:www-data /var/lib/nginx /var/log/nginx /run/nginx \
     && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 80
