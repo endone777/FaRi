@@ -21,7 +21,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $year_to
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read CarBrand $carBrand
+ * @property-read CarBrand|null $carBrand
  */
 #[Fillable(['car_brand_id', 'name', 'slug', 'year_from', 'year_to'])]
 class CarModel extends Model

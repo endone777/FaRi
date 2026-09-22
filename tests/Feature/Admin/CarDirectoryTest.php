@@ -161,6 +161,17 @@ test('an unused make is deleted with its generations', function () {
         ->and(CarModel::query()->count())->toBe(0);
 });
 
+test('deleting a make leaves no models behind it', function () {
+    $brand = CarBrand::factory()->create();
+    CarModel::factory()->count(3)->for($brand, 'carBrand')->create();
+    $other = CarModel::factory()->create();
+
+    $this->delete(route('admin.cars.brands.destroy', $brand));
+
+    expect(CarModel::query()->where('car_brand_id', $brand->id)->count())->toBe(0)
+        ->and(CarModel::query()->whereKey($other->id)->exists())->toBeTrue();
+});
+
 test('a customer may not touch the directory', function () {
     $this->actingAs(User::factory()->create());
 

@@ -13,6 +13,9 @@ services:
             DB_CONNECTION: '${DB_CONNECTION:-sqlite}'
             DB_DATABASE: '${DB_DATABASE:-/var/www/html/storage/app/database/database.sqlite}'
             DEPLOY_SEED: '${DEPLOY_SEED:-false}'
+            # Ошибки должны быть видны в `./deploy.sh logs`, а не только в файле.
+            LOG_CHANNEL: '${LOG_CHANNEL:-stderr}'
+            LOG_LEVEL: '${LOG_LEVEL:-warning}'
         volumes:
             # Единственный каталог с состоянием: база, загруженные фото, логи.
             - fari-storage:/var/www/html/storage

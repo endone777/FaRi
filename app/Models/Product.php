@@ -92,7 +92,13 @@ class Product extends Model
         return Attribute::get(function (): string {
             $carModel = $this->carModel;
 
-            return $carModel === null ? '' : $carModel->carBrand->name;
+            if ($carModel === null) {
+                return '';
+            }
+
+            $carBrand = $carModel->carBrand;
+
+            return $carBrand === null ? '' : $carBrand->name;
         });
     }
 
@@ -132,7 +138,9 @@ class Product extends Model
 
     public function title(): string
     {
-        return trim($this->brand.' '.$this->model).' — '.$this->name;
+        $car = trim($this->brand.' '.$this->model);
+
+        return $car === '' ? $this->name : $car.' — '.$this->name;
     }
 
     /**
