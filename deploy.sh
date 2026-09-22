@@ -402,11 +402,33 @@ fi
 
 step "Собираю образ (первый раз это занимает несколько минут)"
 
-if [ -n "$NO_CACHE" ]; then
-    compose build "$NO_CACHE"
-else
-    compose build
-fi
+build_image() {
+    if [ -n "$NO_CACHE" ]; then
+        compose build "$NO_CACHE"
+    else
+        compose build
+    fi
+}
+
+# Сборка тянет базовые образы из реестра, а связь с ним бывает нестабильной.
+attempt=1
+
+until build_image; do
+    if [ "$attempt" -ge 3 ]; then
+        printf '\n'
+        warn "Сборка не удалась три раза подряд."
+        warn "Обычно причина — сеть: сервер не достучался до registry-1.docker.io."
+        warn "Проверьте вручную: docker pull php:8.4-fpm-alpine"
+        warn "Если реестр недоступен, пропишите зеркало в /etc/docker/daemon.json:"
+        warn '  {"registry-mirrors": ["https://mirror.gcr.io"]}'
+        warn "и перезапустите Docker: sudo systemctl restart docker"
+        die "Сборка образа не завершилась."
+    fi
+
+    attempt=$((attempt + 1))
+    warn "Сборка сорвалась, пробую ещё раз ($attempt из 3)…"
+    sleep 5
+done
 
 step "Запускаю приложение"
 DEPLOY_SEED="$SEED" compose up -d --remove-orphans

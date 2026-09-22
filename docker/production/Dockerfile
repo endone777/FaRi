@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # ── Сборка: PHP нужен и здесь, потому что Wayfinder во время vite build
 # ── вызывает `php artisan wayfinder:generate`.
 FROM php:8.4-cli-alpine AS build
